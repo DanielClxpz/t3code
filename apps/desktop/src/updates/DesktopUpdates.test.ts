@@ -879,3 +879,19 @@ describe("DesktopUpdates", () => {
     ).pipe(Effect.provide(Layer.merge(TestClock.layer(), harness.layer)));
   });
 });
+
+it.effect.each([
+  { owner: "DanielClxpz", enabled: true },
+  { owner: "pingdotgg", enabled: false },
+])("only enables the custom GitHub feed ($owner)", ({ owner, enabled }) => {
+  const harness = makeHarness({
+    platform: "win32",
+    env: { T3CODE_DESKTOP_MOCK_UPDATES: "false" },
+    appUpdateYml: `provider: github\nowner: ${owner}\nrepo: t3code\n`,
+  });
+  return Effect.gen(function* () {
+    const updates = yield* DesktopUpdates.DesktopUpdates;
+    yield* updates.configure;
+    assert.equal((yield* updates.getState).enabled, enabled);
+  }).pipe(Effect.scoped, Effect.provide(harness.layer));
+});

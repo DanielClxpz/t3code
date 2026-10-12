@@ -8,6 +8,7 @@ import {
   type DesktopUpdateState,
 } from "@t3tools/contracts";
 import * as Cause from "effect/Cause";
+import { CUSTOM_DISTRIBUTION } from "@t3tools/shared/customDistribution";
 import * as Context from "effect/Context";
 import * as DateTime from "effect/DateTime";
 import * as Duration from "effect/Duration";
@@ -912,7 +913,14 @@ export const make = Effect.gen(function* () {
         void Effect.runPromiseWith(context)(effect);
       };
 
-      const appUpdateYmlConfig = yield* readAppUpdateYml;
+      const appUpdateYmlConfig = (yield* readAppUpdateYml).pipe(
+        Option.filter(
+          (feed) =>
+            config.mockUpdates ||
+            (feed.provider === "github" &&
+              `${feed.owner}/${feed.repo}` === CUSTOM_DISTRIBUTION.repository),
+        ),
+      );
       yield* Ref.set(appUpdateYmlConfigRef, appUpdateYmlConfig);
 
       if (config.mockUpdates) {

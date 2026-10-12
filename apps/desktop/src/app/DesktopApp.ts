@@ -20,7 +20,6 @@ import * as DesktopWindow from "../window/DesktopWindow.ts";
 import * as PreviewPasskeys from "../preview/Passkeys.ts";
 import * as DesktopBackendPool from "../backend/DesktopBackendPool.ts";
 import * as DesktopEnvironment from "./DesktopEnvironment.ts";
-import * as DesktopLegacyLocalStorage from "./DesktopLegacyLocalStorage.ts";
 import * as DesktopLifecycle from "./DesktopLifecycle.ts";
 import * as DesktopLinuxUrlHandler from "./DesktopLinuxUrlHandler.ts";
 import * as DesktopObservability from "./DesktopObservability.ts";
@@ -183,10 +182,7 @@ const bootstrap = Effect.gen(function* () {
   });
   yield* installDesktopIpcHandlers();
   yield* logBootstrapInfo("bootstrap ipc handlers registered");
-  // Before any window: the preload merges these items before the app reads storage.
-  yield* (yield* DesktopLegacyLocalStorage.DesktopLegacyLocalStorage).load(
-    yield* (yield* DesktopAppIdentity.DesktopAppIdentity).resolveUserDataPath,
-  );
+  // Custom installs import official data only through an explicitly prepared copy.
 
   yield* snapShot.initialize;
 

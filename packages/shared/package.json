@@ -482,6 +482,10 @@
     "./PtyAdapter": {
       "types": "./src/PtyAdapter.ts",
       "import": "./src/PtyAdapter.ts"
+    },
+    "./customDistribution": {
+      "types": "./src/customDistribution.ts",
+      "import": "./src/customDistribution.ts"
     }
   },
   "scripts": {

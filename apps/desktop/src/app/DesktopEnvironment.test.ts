@@ -76,7 +76,7 @@ describe("DesktopEnvironment", () => {
       assert.equal(environment.serverRoot, "/repo");
       assert.equal(environment.backendEntryPath, "/repo/apps/server/dist/bin.mjs");
       assert.equal(environment.backendCwd, "/repo");
-      assert.equal(environment.appUserModelId, "com.t3tools.t3code.dev");
+      assert.equal(environment.appUserModelId, "io.github.danielclxpz.t3code.custom.dev");
       assert.equal(environment.linuxWmClass, "t3code-dev");
       assert.equal(environment.linuxDesktopEntryName, "com.t3tools.T3Code.Development.desktop");
       assert.deepEqual(
@@ -106,7 +106,7 @@ describe("DesktopEnvironment", () => {
       const environment = yield* makeEnvironment(
         {},
         {
-          T3CODE_HOME: "/tmp/t3",
+          T3CODE_CUSTOM_HOME: "/tmp/t3",
         },
       );
 
@@ -162,8 +162,8 @@ describe("DesktopEnvironment", () => {
       );
       const production = yield* makeEnvironment();
 
-      assert.equal(development.stateDir, "/Users/alice/.t3/dev");
-      assert.equal(production.stateDir, "/Users/alice/.t3/userdata");
+      assert.equal(development.stateDir, "/Users/alice/.t3-custom/dev");
+      assert.equal(production.stateDir, "/Users/alice/.t3-custom/userdata");
     }),
   );
 
@@ -201,3 +201,16 @@ describe("DesktopEnvironment", () => {
     }),
   );
 });
+
+it.effect("ignores the official home inherited by a packaged custom app", () =>
+  Effect.gen(function* () {
+    const environment = yield* makeEnvironment(
+      { platform: "win32", isPackaged: true },
+      { T3CODE_HOME: "/Users/alice/.t3" },
+    );
+    assert.equal(environment.baseDir, "/Users/alice/.t3-custom");
+    assert.equal(environment.stateDir, "/Users/alice/.t3-custom/userdata");
+    assert.equal(environment.displayName, "T3 Code Custom");
+    assert.equal(environment.appUserModelId, "io.github.danielclxpz.t3code.custom");
+  }),
+);

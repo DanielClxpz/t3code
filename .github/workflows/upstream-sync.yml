@@ -1,0 +1,55 @@
+name: Sync upstream into custom
+
+on:
+  schedule:
+    - cron: "23 13 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: custom-upstream-sync
+  cancel-in-progress: false
+
+jobs:
+  integrate:
+    if: github.repository == 'DanielClxpz/t3code'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      changed: ${{ steps.sync.outputs.changed }}
+      sha: ${{ steps.sync.outputs.sha }}
+      conflicts: ${{ steps.sync.outputs.conflicts }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: custom
+          fetch-depth: 0
+      - name: Copy trusted sync helper before merging
+        run: cp scripts/custom-upstream-sync.mjs "$RUNNER_TEMP/custom-upstream-sync.mjs"
+      - id: sync
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node "$RUNNER_TEMP/custom-upstream-sync.mjs"
+
+  checks:
+    needs: integrate
+    if: needs.integrate.outputs.changed == 'true' && needs.integrate.outputs.conflicts == 'false'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/ci.yml
+    with:
+      ref: ${{ needs.integrate.outputs.sha }}
+
+  conflicts:
+    needs: integrate
+    if: needs.integrate.outputs.conflicts == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - run: |
+          echo "Upstream conflicts need human review. The draft PR lists the affected files."
+          exit 1

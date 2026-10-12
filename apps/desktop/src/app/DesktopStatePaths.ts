@@ -1,4 +1,5 @@
 import * as Option from "effect/Option";
+import { CUSTOM_DISTRIBUTION } from "@t3tools/shared/customDistribution";
 
 export type JoinPath = (first: string, ...segments: string[]) => string;
 
@@ -16,7 +17,7 @@ export function resolveDesktopBaseDir(input: {
   readonly t3Home: Option.Option<string>;
 }): string {
   return Option.getOrElse(normalizeConfiguredBaseDir(input.t3Home), () =>
-    input.joinPath(input.homeDirectory, ".t3"),
+    input.joinPath(input.homeDirectory, CUSTOM_DISTRIBUTION.homeDirectory),
   );
 }
 

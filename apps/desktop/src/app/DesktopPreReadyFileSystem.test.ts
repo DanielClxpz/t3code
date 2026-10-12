@@ -11,13 +11,12 @@ import * as DesktopUserData from "./DesktopUserData.ts";
 
 const resolveWindowsUserData = (appDataDirectory: string) =>
   DesktopUserData.resolveUserDataPath({
-    appDataDirectory,
+    baseDir: appDataDirectory,
     isDevelopment: false,
-    platform: "win32",
   }).pipe(Effect.provide(DesktopPreReadyFileSystem.layer));
 
 it.layer(NodeServices.layer)("DesktopPreReadyFileSystem", (it) => {
-  it.effect("migrates the legacy Windows profile state", () =>
+  it.effect("leaves the official Windows profile untouched", () =>
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
@@ -27,13 +26,17 @@ it.layer(NodeServices.layer)("DesktopPreReadyFileSystem", (it) => {
 
       const userData = yield* resolveWindowsUserData(root);
 
-      assert.equal(userData, path.join(root, "t3code-v2"));
-      assert.equal(yield* fileSystem.readFileString(path.join(userData, "Local State")), "keys");
+      assert.equal(userData, path.join(root, "electron"));
+      assert.isFalse(yield* fileSystem.exists(path.join(userData, "Local State")));
+      assert.equal(
+        yield* fileSystem.readFileString(path.join(root, "T3 Code (Alpha)", "Local State")),
+        "keys",
+      );
     }),
   );
 
   it.effect.skipIf(HostProcess.Platform.defaultValue() === "win32" || process.getuid?.() === 0)(
-    "fails instead of treating an unreadable profile as missing",
+    "resolves a custom profile without reading official profile data",
     () =>
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
@@ -43,7 +46,7 @@ it.layer(NodeServices.layer)("DesktopPreReadyFileSystem", (it) => {
 
         const exit = yield* Effect.exit(resolveWindowsUserData(root));
 
-        assert.isTrue(Exit.isFailure(exit));
+        assert.isTrue(Exit.isSuccess(exit));
       }),
   );
 });
