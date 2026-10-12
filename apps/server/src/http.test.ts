@@ -140,49 +140,66 @@ describe("untraced requests", () => {
 });
 
 describe("browser API CORS", () => {
-  it("accepts protocol negotiation with authenticated browser headers", async () => {
-    const layerRoute = Layer.effectDiscard(
-      Effect.gen(function* () {
-        const router = yield* HttpRouter.HttpRouter;
-        yield* router.add("GET", "/api/environment", HttpServerResponse.empty());
-      }),
-    );
-    const layerApp = Layer.merge(layerRoute, ServerHttp.layerBrowserApiCors).pipe(
-      Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "http-cors-test-" })),
-      Layer.provide(NodeServices.layer),
-    );
-    const { handler, dispose } = HttpRouter.toWebHandler(layerApp, { disableLogger: true });
-
-    try {
-      const response = await handler(
-        new Request("https://backend.example/api/environment", {
-          method: "OPTIONS",
-          headers: {
-            origin: "https://app.t3.codes",
-            "access-control-request-method": "GET",
-            "access-control-request-headers": [
-              ORCHESTRATION_PROTOCOL_HEADER,
-              "authorization",
-              "dpop",
-            ].join(", "),
-          },
+  it.each(["https://app.t3.codes", "t3code-custom://app", "t3code-custom-dev://app"])(
+    "accepts protocol negotiation from %s with authenticated headers",
+    async (origin) => {
+      const layerRoute = Layer.effectDiscard(
+        Effect.gen(function* () {
+          const router = yield* HttpRouter.HttpRouter;
+          yield* router.add("GET", "/api/environment", HttpServerResponse.empty());
         }),
       );
-
-      expect(response.status).toBe(204);
-      expect(response.headers.get("access-control-allow-origin")).toBe("*");
-      const allowedHeaders = new Set(
-        (response.headers.get("access-control-allow-headers") ?? "")
-          .split(",")
-          .map((header) => header.trim().toLowerCase()),
+      const layerApp = Layer.merge(layerRoute, ServerHttp.layerBrowserApiCors).pipe(
+        Layer.provide(
+          Layer.effect(
+            ServerConfig.ServerConfig,
+            Effect.map(ServerConfig.ServerConfig, (config) => ({
+              ...config,
+              devUrl: origin.startsWith("t3code-custom")
+                ? new URL("http://localhost:5173")
+                : undefined,
+            })),
+          ).pipe(
+            Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "http-cors-test-" })),
+          ),
+        ),
+        Layer.provide(NodeServices.layer),
       );
-      expect(allowedHeaders.has(ORCHESTRATION_PROTOCOL_HEADER)).toBe(true);
-      expect(allowedHeaders.has("authorization")).toBe(true);
-      expect(allowedHeaders.has("dpop")).toBe(true);
-    } finally {
-      await dispose();
-    }
-  });
+      const { handler, dispose } = HttpRouter.toWebHandler(layerApp, { disableLogger: true });
+
+      try {
+        const response = await handler(
+          new Request("https://backend.example/api/environment", {
+            method: "OPTIONS",
+            headers: {
+              origin,
+              "access-control-request-method": "GET",
+              "access-control-request-headers": [
+                ORCHESTRATION_PROTOCOL_HEADER,
+                "authorization",
+                "dpop",
+              ].join(", "),
+            },
+          }),
+        );
+
+        expect(response.status).toBe(204);
+        expect(response.headers.get("access-control-allow-origin")).toBe(
+          origin.startsWith("t3code-custom") ? origin : "*",
+        );
+        const allowedHeaders = new Set(
+          (response.headers.get("access-control-allow-headers") ?? "")
+            .split(",")
+            .map((header) => header.trim().toLowerCase()),
+        );
+        expect(allowedHeaders.has(ORCHESTRATION_PROTOCOL_HEADER)).toBe(true);
+        expect(allowedHeaders.has("authorization")).toBe(true);
+        expect(allowedHeaders.has("dpop")).toBe(true);
+      } finally {
+        await dispose();
+      }
+    },
+  );
 });
 
 const layerFileResponse = Layer.mergeAll(NodeHttpPlatform.layer, NodeServices.layer);

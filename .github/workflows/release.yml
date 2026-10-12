@@ -73,6 +73,7 @@ jobs:
         with:
           path: ${{ steps.store.outputs.path }}
           key: custom-windows-x64-${{ hashFiles('pnpm-lock.yaml') }}
+          save-always: true
       - run: vp install --frozen-lockfile --filter=@t3tools/monorepo --filter=@t3tools/desktop... --filter=t3... --filter=@t3tools/scripts...
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -83,6 +84,7 @@ jobs:
         with:
           path: native/resource-monitor/target/x86_64-pc-windows-msvc/release/t3-resource-monitor.exe
           key: custom-monitor-x64-${{ hashFiles('native/resource-monitor/Cargo.lock', 'native/resource-monitor/Cargo.toml', 'native/resource-monitor/src/**') }}
+          save-always: true
       - name: Install MSVC Spectre libraries
         if: steps.monitor.outputs.cache-hit != 'true'
         shell: pwsh
@@ -99,7 +101,7 @@ jobs:
         run: |
           node scripts/update-release-package-versions.ts $env:VERSION
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          vp run dist:desktop:artifact --platform win --target nsis --arch x64 --version $env:VERSION
+          vp run dist:desktop:artifact --platform win --target nsis --arch x64 --build-version $env:VERSION
       - name: Verify updater metadata and packaged versions
         shell: pwsh
         run: |
