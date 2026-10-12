@@ -109,6 +109,20 @@ async function main() {
   // An ordinary push fails safely if somebody changed the branch concurrently.
   git(cwd, "push", "origin", `HEAD:refs/heads/${branch}`);
   const sha = git(cwd, "rev-parse", "HEAD");
+  gh(
+    "api",
+    `repos/${repository}/statuses/${sha}`,
+    "--method",
+    "POST",
+    "-f",
+    "state=pending",
+    "-f",
+    "context=Custom upstream checks",
+    "-f",
+    "description=Waiting for integration verification",
+    "-f",
+    `target_url=${process.env.GITHUB_SERVER_URL}/${repository}/actions/runs/${process.env.GITHUB_RUN_ID}`,
+  );
   const status = result.conflicts.length
     ? `Merge blocked during ${result.phase} integration. No conflict resolution was accepted.\n\nConflicting files:\n${result.conflicts.map((f) => `- \`${f}\``).join("\n")}`
     : "Merge completed. The upstream-sync workflow runs the essential checks on this exact commit. Review the changes and check results before merging.";

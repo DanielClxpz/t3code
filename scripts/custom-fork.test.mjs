@@ -104,6 +104,25 @@ NodeTest.test("refuses reintroduced workflows", (t) => {
   NodeAssert.throws(() => checkPolicy(root), /Unexpected workflow/);
 });
 
+NodeTest.test("retains human fixes when refreshing an existing integration branch", (t) => {
+  const { root, git } = repository(t);
+  git("switch", "-c", "review-fixes", "custom");
+  NodeFS.writeFileSync(NodePath.join(root, "review.txt"), "reviewed custom fix");
+  git("add", ".");
+  git("commit", "-m", "human fix");
+  const existing = git("rev-parse", "HEAD");
+  git("switch", "main");
+  NodeFS.writeFileSync(NodePath.join(root, "upstream.txt"), "next improvement");
+  git("add", ".");
+  git("commit", "-m", "next upstream");
+  NodeAssert.deepEqual(integrate(root, "custom", "main", existing).conflicts, []);
+  git("merge-base", "--is-ancestor", existing, "HEAD");
+  NodeAssert.equal(
+    NodeFS.readFileSync(NodePath.join(root, "review.txt"), "utf8"),
+    "reviewed custom fix",
+  );
+});
+
 NodeTest.test("versions increase across test and production runs and fit Windows fields", () => {
   const date = new Date("2026-10-11T00:00:00Z");
   NodeAssert.equal(releaseVersion("test", 12, date), "1.0.12-nightly.20261011.12");

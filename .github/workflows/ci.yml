@@ -21,7 +21,7 @@ concurrency:
 jobs:
   checks:
     # Bot integration commits are checked by the sync workflow's reusable call.
-    if: github.event_name != 'pull_request' || github.head_ref != 'automation/upstream'
+    if: github.event_name != 'pull_request' || github.head_ref != 'automation/upstream' || github.actor != 'github-actions[bot]'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
