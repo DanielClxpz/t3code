@@ -56,6 +56,10 @@ Packaged startup ignores an inherited `T3CODE_HOME`. For an isolated test copy, 
 `T3CODE_CUSTOM_HOME` before launching. Never set it to the official home or a junction to that home.
 OAuth uses `t3code-custom://`, leaving official `t3code://` registration alone.
 
+On Windows, NSIS restarts the application through its shortcut. Process-only environment overrides,
+including a temporary `T3CODE_CUSTOM_HOME` or port, do not survive that restart. Use the normal custom
+home for automatic update acceptance testing. A temporary override remains useful for startup tests.
+
 The upstream `DesktopUpdates` service and `electron-updater` still handle checks, notification,
 download progress, backend shutdown, installation, and restart. The app checks at startup and
 periodically; downloading and installing retain the normal in-app controls. Production builds embed
@@ -181,8 +185,12 @@ Do not run both applications against one database.
 
 Use two consecutive `test` workflow runs and copied data before publishing production.
 
+Use an unused `%USERPROFILE%\.t3-custom` home for this test and leave `T3CODE_CUSTOM_HOME` unset.
+Prepare the snapshot in that custom home before launching. If it already contains important custom
+data, use a separate Windows test account instead. Never overwrite an existing home for this test.
+
 1. Download and install the older test build independently. Launch with the isolated
-   `T3CODE_CUSTOM_HOME`. Confirm the custom shortcut, installation path, app name, and copied
+   default custom home. Confirm the custom shortcut, installation path, app name, and copied
    conversations, projects, and chosen settings. Record the installed version.
 2. Publish the next test run. In the custom app, select Nightly and check for updates.
    Confirm the offered version and that release assets come from `DanielClxpz/t3code`.
